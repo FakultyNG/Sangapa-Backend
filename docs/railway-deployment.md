@@ -60,7 +60,7 @@ Configured deployment behavior:
 
 - Build: `pnpm install --frozen-lockfile`, `pnpm prisma:generate`, `pnpm build`
 - Pre-deploy migration: `pnpm prisma:deploy`
-- Start: `pnpm start:prod`
+- Start: `pnpm start:railway`
 - Healthcheck: `GET /ready`
 
 ## Manual Railway Setup
@@ -96,11 +96,13 @@ pnpm lint
 pnpm test
 ```
 
-The production start script runs:
+The Railway start script runs migrations before booting the app:
 
 ```bash
-node dist/src/main.js
+pnpm prisma:deploy && node dist/src/main.js
 ```
+
+If Railway logs say `The table public.users does not exist`, migrations did not run against the same database URL used by the app. Confirm `DATABASE_URL` is set on the backend service and points to the Railway Postgres service.
 
 If you need to inspect migration status against a configured production database:
 

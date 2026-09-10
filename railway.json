@@ -6,7 +6,7 @@
   },
   "deploy": {
     "preDeployCommand": "pnpm prisma:deploy",
-    "startCommand": "pnpm start:prod",
+    "startCommand": "pnpm start:railway",
     "healthcheckPath": "/ready",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
