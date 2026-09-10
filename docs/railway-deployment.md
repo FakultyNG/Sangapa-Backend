@@ -96,6 +96,12 @@ pnpm lint
 pnpm test
 ```
 
+The production start script runs:
+
+```bash
+node dist/src/main.js
+```
+
 If you need to inspect migration status against a configured production database:
 
 ```bash
