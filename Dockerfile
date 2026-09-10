@@ -19,4 +19,4 @@ ENV NODE_ENV=production
 COPY --from=build /app ./
 RUN mkdir -p /app/uploads
 EXPOSE 3000
-CMD ["pnpm", "start:prod"]
+CMD ["pnpm", "start:railway"]
