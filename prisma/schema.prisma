@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserTier {
+  TIER_1
+  TIER_2
+}
+
+enum UserDeletionStatus {
+  ACTIVE
+  DELETED
+}
+
+enum OtpPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+  PIN_RESET
+}
+
+enum BeneficiaryType {
+  EUR_IBAN
+  EUR_WISETAG
+  USDC_ADDRESS
+}
+
+enum BeneficiaryStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum WebhookProcessingStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum KycIdCardType {
+  PASSPORT
+  NATIONAL_ID
+  VOTER_CARD
+  DRIVER_LICENCE
+}
+
+model User {
+  id              String     @id @default(uuid())
+  email           String     @unique
+  passwordHash    String
+  pinHash         String
+  fullName        String?
+  phoneNumber     String?
+  profileImageUrl String?
+  emailNotificationsEnabled Boolean @default(true)
+  emailVerifiedAt DateTime?
+  status          UserStatus @default(ACTIVE)
+  deletionStatus  UserDeletionStatus @default(ACTIVE)
+  role            UserRole   @default(USER)
+  tier            UserTier   @default(TIER_1)
+  dailyDepositLimitXaf   String @default("500000")
+  monthlyDepositLimitXaf String @default("2500000")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  sessions Session[]
+  otpCodes OtpCode[]
+  beneficiaries Beneficiary[]
+  notifications Notification[]
+  biometricCredentials BiometricCredential[]
+  kycSubmissions KycSubmission[]
+
+  @@map("users")
+}
+
+model AdminEnvironmentVariable {
+  key       String   @id
+  value     String
+  sensitive Boolean  @default(true)
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("admin_environment_variables")
+}
+
+model Beneficiary {
+  id                 String            @id @default(uuid())
+  userId             String
+  type               BeneficiaryType
+  beneficiaryName    String
+  iban               String?
+  bankName           String?
+  beneficiaryAddress String?
+  wiseTag            String?
+  usdcAddress        String?
+  usdcNetwork        String?
+  status             BeneficiaryStatus @default(ACTIVE)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("beneficiaries")
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  refreshTokenHash String
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  lastUsedAt       DateTime  @default(now())
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model BiometricCredential {
+  id           String   @id @default(uuid())
+  userId       String
+  deviceId     String   @unique
+  publicKey    String
+  enabled      Boolean  @default(true)
+  challenge    String?
+  challengeExpiresAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@map("biometric_credentials")
+}
+
+model KycSubmission {
+  id             String    @id @default(uuid())
+  userId         String
+  documentType   String
+  documentNumber String?
+  frontImageUrl  String
+  backImageUrl   String?
+  selfieImageUrl String?
+  countryOfOrigin String?
+  countryOfResidence String?
+  proofOfAddressUrl String?
+  faceVerificationImageUrl String?
+  idCardType KycIdCardType?
+  idFrontUrl String?
+  idBackUrl String?
+  status         KycStatus @default(PENDING)
+  rejectionReason String?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@map("kyc_submissions")
+}
+
+model OtpCode {
+  id          String     @id @default(uuid())
+  userId      String
+  purpose     OtpPurpose
+  codeHash    String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  attempts    Int        @default(0)
+  createdAt   DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, consumedAt])
+  @@map("otp_codes")
+}
+
+model ReepayWebhookEvent {
+  id               String                  @id @default(uuid())
+  eventId          String                  @unique
+  eventType        String
+  payload          Json
+  signatureValid   Boolean
+  receivedAt       DateTime                @default(now())
+  processedAt      DateTime?
+  processingStatus WebhookProcessingStatus @default(RECEIVED)
+  errorMessage     String?
+
+  @@index([eventType])
+  @@index([processingStatus])
+  @@map("reepay_webhook_events")
+}
+
+model Notification {
+  id        String             @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  payload   Json?
+  status    NotificationStatus @default(UNREAD)
+  readAt    DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+  @@map("notifications")
+}

@@ -1,0 +1,15 @@
+packages:
+  - "."
+
+onlyBuiltDependencies:
+  - "@parcel/watcher"
+  - esbuild
+  - msgpackr-extract
+  - "unrs-resolver"
+  - workerd
+allowBuilds:
+  "@parcel/watcher": true
+  esbuild: true
+  msgpackr-extract: true
+  unrs-resolver: true
+  workerd: true
