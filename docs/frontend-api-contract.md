@@ -74,6 +74,19 @@ OTP is used for registration email verification and password reset only. Login d
 
 Result: sends email OTP. New users default to `TIER_1`.
 
+OTP challenge responses include:
+
+```json
+{
+  "success": true,
+  "message": "Verification code sent to email",
+  "expiresInSec": 600,
+  "retryAfterSec": 60
+}
+```
+
+Use `retryAfterSec` to disable the resend button and display a countdown.
+
 ### Verify Email
 
 `POST /auth/verify-email`
@@ -84,6 +97,18 @@ Result: sends email OTP. New users default to `TIER_1`.
   "otp": "123456"
 }
 ```
+
+### Resend Registration OTP
+
+`POST /auth/resend-email-otp`
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+If the user is still inside the resend cooldown, the backend returns success with the remaining `retryAfterSec`; the frontend should keep the resend button disabled until it reaches zero.
 
 ### Login
 
@@ -468,6 +493,12 @@ Production must override these using:
 - `DEFAULT_ADMIN_EMAIL`
 - `DEFAULT_ADMIN_PASSWORD`
 - `DEFAULT_ADMIN_PIN`
+
+To create or rotate an admin account from CLI/Railway shell:
+
+```bash
+ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='StrongPassword123!' ADMIN_PIN=1234 pnpm admin:create
+```
 
 All admin routes require bearer token for an `ADMIN` user.
 

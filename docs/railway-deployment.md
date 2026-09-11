@@ -44,6 +44,16 @@ DEFAULT_ADMIN_PASSWORD=
 DEFAULT_ADMIN_PIN=
 ```
 
+## Create Or Rotate Admin
+
+After migrations have run, create or rotate a dashboard admin from a Railway shell or one-off command:
+
+```bash
+ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD='StrongPassword123!' ADMIN_PIN=1234 pnpm admin:create
+```
+
+The command marks the admin email as verified and sets role `ADMIN`.
+
 If no admin exists, the backend creates one on startup. Do not use the development defaults in production.
 
 ## Build And Start

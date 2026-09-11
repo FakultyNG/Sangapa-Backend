@@ -19,7 +19,10 @@ Copy `.env.example` to `.env` and set real secrets before starting the app.
 pnpm lint
 pnpm test
 pnpm build
+pnpm admin:create
 ```
+
+`pnpm admin:create` creates or updates an admin using `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_PIN`. It falls back to `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD`, and `DEFAULT_ADMIN_PIN`.
 
 ## Health
 

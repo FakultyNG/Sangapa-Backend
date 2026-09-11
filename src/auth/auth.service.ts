@@ -32,6 +32,7 @@ export type OtpChallengeResponse = {
   success: true;
   message: string;
   expiresInSec: number;
+  retryAfterSec: number;
 };
 
 export type AuthTokens = {
@@ -60,6 +61,7 @@ export type BiometricChallengeResponse = {
 };
 
 const OTP_TTL_SEC = 10 * 60;
+const OTP_RESEND_COOLDOWN_SEC = 60;
 const OTP_MAX_ATTEMPTS = 5;
 const ACCESS_TOKEN_TTL_SEC = 5 * 60;
 const REFRESH_TOKEN_INACTIVITY_TTL_SEC = 5 * 24 * 60 * 60;
@@ -108,6 +110,22 @@ export class AuthService {
     });
 
     return this.users.toPublicUser(verifiedUser);
+  }
+
+  async resendEmailOtp(email: string): Promise<OtpChallengeResponse> {
+    const user = await this.findUserByEmail(email);
+
+    if (user.emailVerifiedAt) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    const retryAfterSec = await this.getOtpRetryAfterSec(user.id, OtpPurpose.EMAIL_VERIFICATION);
+    if (retryAfterSec > 0) {
+      return this.otpResponse('Please wait before requesting another verification code', retryAfterSec);
+    }
+
+    await this.issueOtp(user, OtpPurpose.EMAIL_VERIFICATION, 'email verification');
+    return this.otpResponse('Verification code resent to email');
   }
 
   async login(dto: LoginDto, request: AuthenticatedRequest): Promise<AuthTokens> {
@@ -548,7 +566,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired OTP');
     }
 
-    const valid = await bcrypt.compare(code, otp.codeHash);
+    const valid = await bcrypt.compare(code.trim(), otp.codeHash);
     if (!valid) {
       await this.prisma.otpCode.update({
         where: { id: otp.id },
@@ -597,11 +615,32 @@ export class AuthService {
     return email.trim().toLowerCase();
   }
 
-  private otpResponse(message: string): OtpChallengeResponse {
+  private otpResponse(message: string, retryAfterSec = OTP_RESEND_COOLDOWN_SEC): OtpChallengeResponse {
     return {
       success: true,
       message,
       expiresInSec: OTP_TTL_SEC,
+      retryAfterSec,
     };
+  }
+
+  private async getOtpRetryAfterSec(userId: string, purpose: OtpPurpose): Promise<number> {
+    const latestOtp = await this.prisma.otpCode.findFirst({
+      where: {
+        userId,
+        purpose,
+        consumedAt: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (!latestOtp) {
+      return 0;
+    }
+
+    const elapsedSec = Math.floor((Date.now() - latestOtp.createdAt.getTime()) / 1000);
+    return Math.max(0, OTP_RESEND_COOLDOWN_SEC - elapsedSec);
   }
 }

@@ -19,6 +19,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshSessionDto } from './dto/refresh-session.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterBiometricDto } from './dto/register-biometric.dto';
+import { ResendEmailOtpDto } from './dto/resend-email-otp.dto';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { UnlockWithPinDto } from './dto/unlock-with-pin.dto';
 import { UpdateBiometricSettingDto } from './dto/update-biometric-setting.dto';
@@ -38,6 +39,11 @@ export class AuthController {
   @Post('verify-email')
   verifyEmail(@Body() dto: VerifyEmailDto): Promise<PublicUser> {
     return this.auth.verifyEmail(dto);
+  }
+
+  @Post('resend-email-otp')
+  resendEmailOtp(@Body() dto: ResendEmailOtpDto): Promise<OtpChallengeResponse> {
+    return this.auth.resendEmailOtp(dto.email);
   }
 
   @Post('login')
