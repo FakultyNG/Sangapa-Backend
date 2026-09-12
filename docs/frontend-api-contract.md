@@ -44,6 +44,14 @@ Error responses:
 
 Frontend API clients should unwrap successful payloads from `response.data`.
 
+Common frontend integration failure:
+
+- Backend returns `{ data: { accessToken, refreshToken, user }, meta }` from login.
+- The frontend must store `apiResponse.data.accessToken`, not `apiResponse.accessToken`.
+- Protected requests must send `Authorization: Bearer <accessToken>`.
+- If wallet screens say backend data will load after authentication, first verify `GET /auth/me` succeeds with the stored access token.
+- Wallet, transaction, deposit, payout, and FX endpoints depend on Reepay availability and valid SangaPay-to-Reepay env variables.
+
 ## Authentication
 
 Use bearer auth for protected endpoints:
@@ -87,6 +95,8 @@ OTP challenge responses include:
 
 Use `retryAfterSec` to disable the resend button and display a countdown.
 
+Database `createdAt` and `expiresAt` timestamps are stored in UTC. Frontend countdowns should use `expiresInSec` and `retryAfterSec`, not raw database timestamps.
+
 ### Verify Email
 
 `POST /auth/verify-email`
@@ -97,6 +107,10 @@ Use `retryAfterSec` to disable the resend button and display a countdown.
   "otp": "123456"
 }
 ```
+
+The backend trims whitespace before checking the OTP. The frontend should still sanitize OTP input before sending it by keeping digits only and joining segmented inputs into one 6-digit string.
+
+If multiple OTP emails arrive out of order, the backend will accept any unexpired unused code for that email and purpose. A successful OTP verification consumes all outstanding codes for the same email and purpose.
 
 ### Resend Registration OTP
 
@@ -159,7 +173,28 @@ Returns:
 
 `POST /auth/logout`
 
-Protected.
+Protected. Requires:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Body: none.
+
+Returns:
+
+```json
+{
+  "success": true
+}
+```
+
+Frontend behavior:
+
+- Call this endpoint when the user taps Logout.
+- Clear `accessToken`, `refreshToken`, current user, biometric lock state for the active app session, and cached sensitive data.
+- Navigate back to the login screen.
+- If logout fails because the access token is already expired, still clear local auth state and navigate to login.
 
 ### Current User
 
@@ -199,6 +234,8 @@ Protected.
   "newPassword": "new-password"
 }
 ```
+
+Password reset OTP is also trimmed by the backend. Frontend OTP input should send a single 6-digit string.
 
 Aliases also supported:
 
@@ -301,8 +338,8 @@ Returns auth tokens.
   "status": "ACTIVE",
   "role": "USER",
   "tier": "TIER_1",
-  "dailyDepositLimitXaf": "500000",
-  "monthlyDepositLimitXaf": "2500000",
+  "dailyDepositLimitXaf": "0",
+  "monthlyDepositLimitXaf": "0",
   "emailNotificationsEnabled": true,
   "createdAt": "2026-09-10T00:00:00.000Z",
   "updatedAt": "2026-09-10T00:00:00.000Z"
@@ -324,12 +361,14 @@ Tiers:
 - `TIER_1`
 - `TIER_2`
 
-Default limits:
+Default backend limits:
 
-- Tier 1 daily deposit limit: `500000` XAF
-- Tier 1 monthly deposit limit: `2500000` XAF
+- Tier 1 daily deposit limit: `0` XAF
+- Tier 1 monthly deposit limit: `0` XAF
 - Tier 2 daily deposit limit: `5000000` XAF
 - Tier 2 monthly deposit limit: `50000000` XAF
+
+The backend does not currently expose a separate minimum transaction limit field. Frontend should display minimum as `0` unless a future backend field is added.
 
 ## Wallets
 
@@ -482,17 +521,13 @@ Other protected KYC routes:
 
 Admin users have role `ADMIN`.
 
-Default local admin bootstrap:
-
-- email: `admin@sangapay.local`
-- password: `Admin12345!`
-- PIN: `0000`
-
-Production must override these using:
+Admin bootstrap uses deployment envs only:
 
 - `DEFAULT_ADMIN_EMAIL`
 - `DEFAULT_ADMIN_PASSWORD`
 - `DEFAULT_ADMIN_PIN`
+
+The backend does not ship hardcoded admin credentials. Do not prefill admin login forms with local/example credentials.
 
 To create or rotate an admin account from CLI/Railway shell:
 
@@ -554,8 +589,8 @@ File field:
 ```json
 {
   "tier": "TIER_1",
-  "dailyDepositLimitXaf": "500000",
-  "monthlyDepositLimitXaf": "2500000"
+  "dailyDepositLimitXaf": "0",
+  "monthlyDepositLimitXaf": "0"
 }
 ```
 

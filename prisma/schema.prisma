@@ -81,8 +81,8 @@ model User {
   deletionStatus  UserDeletionStatus @default(ACTIVE)
   role            UserRole   @default(USER)
   tier            UserTier   @default(TIER_1)
-  dailyDepositLimitXaf   String @default("500000")
-  monthlyDepositLimitXaf String @default("2500000")
+  dailyDepositLimitXaf   String @default("0")
+  monthlyDepositLimitXaf String @default("0")
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 

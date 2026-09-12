@@ -5,10 +5,6 @@ import * as bcrypt from 'bcryptjs';
 
 import { PrismaService } from '../prisma/prisma.service';
 
-const DEFAULT_ADMIN_EMAIL = 'admin@sangapay.local';
-const DEFAULT_ADMIN_PASSWORD = 'Admin12345!';
-const DEFAULT_ADMIN_PIN = '0000';
-
 @Injectable()
 export class AdminBootstrapService implements OnModuleInit {
   private readonly logger = new Logger(AdminBootstrapService.name);
@@ -19,23 +15,28 @@ export class AdminBootstrapService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    const existingAdmin = await this.prisma.user.findFirst({
-      where: { role: UserRole.ADMIN },
-      select: { id: true },
-    });
+    const email = this.config.get<string>('DEFAULT_ADMIN_EMAIL')?.trim().toLowerCase();
+    const password = this.config.get<string>('DEFAULT_ADMIN_PASSWORD');
+    const pin = this.config.get<string>('DEFAULT_ADMIN_PIN');
 
-    if (existingAdmin) {
+    if (!email || !password || !pin) {
+      this.logger.warn(
+        'Default admin bootstrap skipped. Set DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, and DEFAULT_ADMIN_PIN to create or rotate an admin at startup.',
+      );
       return;
     }
 
-    const email = this.config.get<string>('DEFAULT_ADMIN_EMAIL') ?? DEFAULT_ADMIN_EMAIL;
-    const password = this.config.get<string>('DEFAULT_ADMIN_PASSWORD') ?? DEFAULT_ADMIN_PASSWORD;
-    const pin = this.config.get<string>('DEFAULT_ADMIN_PIN') ?? DEFAULT_ADMIN_PIN;
+    if (password.length < 8 || !/^\d{4}$/.test(pin)) {
+      this.logger.error(
+        'Default admin bootstrap skipped. DEFAULT_ADMIN_PASSWORD must be at least 8 characters and DEFAULT_ADMIN_PIN must be 4 digits.',
+      );
+      return;
+    }
 
-    await this.prisma.user.upsert({
-      where: { email: email.trim().toLowerCase() },
+    const admin = await this.prisma.user.upsert({
+      where: { email },
       create: {
-        email: email.trim().toLowerCase(),
+        email,
         passwordHash: await bcrypt.hash(password, 12),
         pinHash: await bcrypt.hash(pin, 12),
         fullName: 'SangaPay Admin',
@@ -43,13 +44,19 @@ export class AdminBootstrapService implements OnModuleInit {
         role: UserRole.ADMIN,
       },
       update: {
+        passwordHash: await bcrypt.hash(password, 12),
+        pinHash: await bcrypt.hash(pin, 12),
         role: UserRole.ADMIN,
         emailVerifiedAt: new Date(),
+        status: 'ACTIVE',
+        deletionStatus: 'ACTIVE',
+      },
+      select: {
+        id: true,
+        email: true,
       },
     });
 
-    this.logger.warn(
-      `Default admin account is available at ${email}. Override DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD, and DEFAULT_ADMIN_PIN before production.`,
-    );
+    this.logger.log(`Configured admin account is ready: ${admin.email} (${admin.id})`);
   }
 }
