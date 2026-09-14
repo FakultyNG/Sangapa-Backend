@@ -66,6 +66,12 @@ Refresh sessions can last up to 5 days of inactivity. After 5 minutes, or after 
 
 OTP is used for registration email verification and password reset only. Login does not require OTP.
 
+Expired session handling:
+
+- If a protected endpoint returns 401 with `Invalid or expired bearer token`, attempt unlock/refresh if a valid refresh token is available and the app policy allows PIN/biometric unlock.
+- If refresh/unlock fails, or the refresh session has expired/revoked, clear local auth state and navigate to the login screen automatically.
+- Do not leave the user on wallet, add money, send money, or admin screens after the backend says the session is no longer active.
+
 ### Register
 
 `POST /auth/register`
@@ -439,6 +445,17 @@ Other deposit routes:
 - `GET /deposits/:id`
 - `POST /deposits/:id/verify`
 
+Add Money flow:
+
+- Use this route for Mobile Money to XAF wallet funding.
+- Do not use frontend mock data after the user confirms add money.
+- Require PIN before submit.
+- Send `Authorization: Bearer <accessToken>`.
+- Generate and send an `Idempotency-Key` header for each user-confirmed create attempt.
+- Do not send `customerId`; the backend derives it from the authenticated user.
+- Supported network values depend on Reepay. Use values agreed with backend/Reepay, for example `MTN_CM` for Cameroon MTN Mobile Money.
+- After create, show the returned Reepay deposit status and poll `GET /deposits/:id` or call `POST /deposits/:id/verify` when the product flow requires verification.
+
 ## FX And Wallet Funding
 
 Protected. Use `Idempotency-Key` for quote and confirm operations when available.
@@ -494,6 +511,39 @@ Protected. Use `Idempotency-Key` for quote and confirm operations when available
 - `GET /payouts/:id`
 
 Do not mark payout successful from initial confirmation. Final status comes from Reepay updates.
+
+Send USDC flow:
+
+- Do not use frontend mock data after the user confirms send USDC.
+- Step 1: collect amount, network, address, and PIN.
+- Step 2: create quote with `POST /payouts/usdc/address/quote`.
+- Step 3: show quote details returned by backend/Reepay.
+- Step 4: confirm with `POST /payouts/usdc/address/confirm` using the returned `quoteId` and PIN.
+- Send `Authorization: Bearer <accessToken>` on both requests.
+- Generate and send an `Idempotency-Key` header for quote and confirm requests.
+- Do not send `customerId`; the backend derives it from the authenticated user.
+- After confirm, show processing/pending state and use `GET /payouts/:id` for status updates if a payout id is returned.
+- Do not mark success until Reepay status is completed.
+
+USDC quote body:
+
+```json
+{
+  "amount": "100.00",
+  "network": "POLYGON",
+  "address": "0x...",
+  "pin": "1234"
+}
+```
+
+USDC confirm body:
+
+```json
+{
+  "quoteId": "quote-id",
+  "pin": "1234"
+}
+```
 
 ## Transactions
 
