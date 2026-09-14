@@ -390,6 +390,29 @@ Protected routes:
 - `GET /wallet/funding-instructions`
 - `GET /wallet/recent-transactions?limit=20`
 
+`GET /wallet/summary` can return a partial success if one Reepay wallet fails while others load:
+
+```json
+{
+  "customerId": "user-id",
+  "wallets": {
+    "xaf": {},
+    "eur": null,
+    "usdc": {}
+  },
+  "sourceOfTruth": "REEPAY",
+  "partial": true,
+  "walletErrors": {
+    "eur": {
+      "code": "REEPAY_WALLET_NOT_FOUND",
+      "message": "EUR wallet not found"
+    }
+  }
+}
+```
+
+If `partial` is true, the frontend should render loaded wallets and show a wallet-specific unavailable state for null wallets instead of treating the whole backend as unavailable.
+
 ## Deposits
 
 ### Create XAF Deposit
@@ -420,6 +443,9 @@ Other deposit routes:
 
 Protected. Use `Idempotency-Key` for quote and confirm operations when available.
 
+- `GET /fx/rates?amount=1000`
+- `GET /fx/rates/xaf-eur?amount=1000`
+- `GET /fx/rates/xaf-usdc?amount=1000`
 - `POST /wallet/eur/quote`
 - `POST /wallet/eur/confirm`
 - `POST /wallet/usdc/quote`
@@ -428,6 +454,31 @@ Protected. Use `Idempotency-Key` for quote and confirm operations when available
 - `POST /fx/quote/xaf-usdc`
 
 Sensitive or money-moving actions should ask for PIN in the UI before sending the request.
+
+Read-only FX rate endpoints do not require PIN. They still require bearer auth and derive `customerId` from the authenticated user.
+
+`GET /fx/rates` can return partial data:
+
+```json
+{
+  "baseCurrency": "XAF",
+  "amount": "1000",
+  "rates": {
+    "xafEur": {},
+    "xafUsdc": null
+  },
+  "sourceOfTruth": "REEPAY",
+  "partial": true,
+  "rateErrors": {
+    "xafUsdc": {
+      "code": "REEPAY_RATE_UNAVAILABLE",
+      "message": "USDC rate unavailable"
+    }
+  }
+}
+```
+
+If `partial` is true, render available rates and show a rate-specific unavailable state for null pairs.
 
 ## Payouts
 

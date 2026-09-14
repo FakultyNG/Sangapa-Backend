@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
-import { ReepayClientService } from '../reepay-client';
+import { ReepayClientException, ReepayClientService } from '../reepay-client';
 import { WalletService } from './wallet.service';
 
 describe('WalletService', () => {
@@ -58,6 +58,35 @@ describe('WalletService', () => {
         usdc: { currency: 'USDC', available: '10.00' },
       },
       sourceOfTruth: 'REEPAY',
+    });
+  });
+
+  it('returns partial wallet summary when one Reepay wallet fails', async () => {
+    reepay.get
+      .mockResolvedValueOnce({ currency: 'XAF', available: '10000' })
+      .mockRejectedValueOnce(
+        new ReepayClientException({
+          code: 'REEPAY_WALLET_NOT_FOUND',
+          message: 'EUR wallet not found',
+        }),
+      )
+      .mockResolvedValueOnce({ currency: 'USDC', available: '10.00' });
+
+    await expect(service.getSummary('user-id', 'request-id')).resolves.toEqual({
+      customerId: 'user-id',
+      wallets: {
+        xaf: { currency: 'XAF', available: '10000' },
+        eur: null,
+        usdc: { currency: 'USDC', available: '10.00' },
+      },
+      sourceOfTruth: 'REEPAY',
+      partial: true,
+      walletErrors: {
+        eur: {
+          code: 'REEPAY_WALLET_NOT_FOUND',
+          message: 'EUR wallet not found',
+        },
+      },
     });
   });
 

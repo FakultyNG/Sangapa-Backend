@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 
 import { AuthService } from '../auth/auth.service';
 import { MoneyMovementAuditService } from '../common/audit/money-movement-audit.service';
-import { ReepayClientService } from '../reepay-client';
+import { ReepayClientException, ReepayClientService } from '../reepay-client';
 import { FxService } from './fx.service';
 
 describe('FxService', () => {
@@ -117,6 +117,71 @@ describe('FxService', () => {
       idempotencyKey: 'idem-key',
       body: {
         quoteId: 'quote-id',
+      },
+    });
+  });
+
+  it('fetches read-only FX rates without PIN', async () => {
+    reepay.post
+      .mockResolvedValueOnce({ pair: 'XAF_EUR', rate: '0.0015' })
+      .mockResolvedValueOnce({ pair: 'XAF_USDC', rate: '0.0017' });
+
+    await expect(service.getRates('user-id', '1000', 'request-id')).resolves.toEqual({
+      baseCurrency: 'XAF',
+      amount: '1000',
+      rates: {
+        xafEur: { pair: 'XAF_EUR', rate: '0.0015' },
+        xafUsdc: { pair: 'XAF_USDC', rate: '0.0017' },
+      },
+      sourceOfTruth: 'REEPAY',
+    });
+    expect(auth.assertSensitivePin).not.toHaveBeenCalled();
+    const eurCall = reepay.post.mock.calls[0];
+    const usdcCall = reepay.post.mock.calls[1];
+    expect(eurCall?.[0]).toBe('/v1/wallet/eur/quote');
+    expect(typeof eurCall?.[1].idempotencyKey).toBe('string');
+    expect(eurCall?.[1]).toMatchObject({
+      requestId: 'request-id',
+      body: {
+        customerId: 'user-id',
+        amount: '1000',
+      },
+    });
+    expect(usdcCall?.[0]).toBe('/v1/wallet/usdc/quote');
+    expect(typeof usdcCall?.[1].idempotencyKey).toBe('string');
+    expect(usdcCall?.[1]).toMatchObject({
+      requestId: 'request-id',
+      body: {
+        customerId: 'user-id',
+        amount: '1000',
+      },
+    });
+  });
+
+  it('returns partial FX rates when one Reepay quote fails', async () => {
+    reepay.post
+      .mockResolvedValueOnce({ pair: 'XAF_EUR', rate: '0.0015' })
+      .mockRejectedValueOnce(
+        new ReepayClientException({
+          code: 'REEPAY_RATE_UNAVAILABLE',
+          message: 'USDC rate unavailable',
+        }),
+      );
+
+    await expect(service.getRates('user-id', '1000', 'request-id')).resolves.toEqual({
+      baseCurrency: 'XAF',
+      amount: '1000',
+      rates: {
+        xafEur: { pair: 'XAF_EUR', rate: '0.0015' },
+        xafUsdc: null,
+      },
+      sourceOfTruth: 'REEPAY',
+      partial: true,
+      rateErrors: {
+        xafUsdc: {
+          code: 'REEPAY_RATE_UNAVAILABLE',
+          message: 'USDC rate unavailable',
+        },
       },
     });
   });
