@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
-import jwt from 'jsonwebtoken';
+import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,45 +15,64 @@ export class JwtAuthGuard implements CanActivate {
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined;
 
     if (!token) {
-      throw new UnauthorizedException('Missing bearer token');
+      throw this.unauthorized('AUTH_MISSING_TOKEN', 'Missing bearer token');
     }
 
+    let payload: JwtPayload;
     try {
-      const payload = jwt.verify(token, this.getAccessSecret()) as JwtPayload;
-      const session = await this.prisma.session.findFirst({
-        where: {
-          id: payload.sessionId,
-          userId: payload.sub,
-          revokedAt: null,
-          expiresAt: {
-            gt: new Date(),
-          },
-        },
-      });
-
-      if (!session) {
-        throw new UnauthorizedException('Session is no longer active');
+      payload = jwt.verify(token, this.getAccessSecret()) as JwtPayload;
+    } catch (error) {
+      if (error instanceof TokenExpiredError) {
+        throw this.unauthorized('AUTH_TOKEN_EXPIRED', 'Access token expired');
       }
 
-      request.user = {
-        id: payload.sub,
-        email: payload.email,
-        sessionId: payload.sessionId,
-        role: payload.role,
-      };
-      return true;
-    } catch {
-      throw new UnauthorizedException('Invalid or expired bearer token');
+      if (error instanceof JsonWebTokenError) {
+        throw this.unauthorized('AUTH_INVALID_TOKEN', 'Invalid bearer token');
+      }
+
+      throw this.unauthorized('AUTH_INVALID_TOKEN', 'Invalid or expired bearer token');
     }
+
+    const session = await this.prisma.session.findFirst({
+      where: {
+        id: payload.sessionId,
+        userId: payload.sub,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!session) {
+      throw this.unauthorized('AUTH_SESSION_INACTIVE', 'Session is no longer active');
+    }
+
+    request.user = {
+      id: payload.sub,
+      email: payload.email,
+      sessionId: payload.sessionId,
+      role: payload.role,
+    };
+    return true;
   }
 
   private getAccessSecret(): string {
     const secret = process.env.JWT_ACCESS_SECRET;
 
     if (!secret) {
-      throw new UnauthorizedException('JWT access secret is not configured');
+      throw this.unauthorized('AUTH_CONFIG_MISSING', 'JWT access secret is not configured');
     }
 
     return secret;
+  }
+
+  private unauthorized(code: string, message: string): UnauthorizedException {
+    return new UnauthorizedException({
+      error: {
+        code,
+        message,
+      },
+    });
   }
 }

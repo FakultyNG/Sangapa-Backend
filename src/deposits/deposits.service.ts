@@ -6,7 +6,7 @@ import { resolveIdempotencyKey } from '../common/utils/idempotency-key.util';
 import { ReepayClientService } from '../reepay-client';
 import { UsersService } from '../users/users.service';
 import { CreateXafDepositDto } from './dto/create-xaf-deposit.dto';
-import { ReepayDeposit } from './deposits.types';
+import { MoneyAmount, ReepayDeposit, XafDepositResponse } from './deposits.types';
 
 @Injectable()
 export class DepositsService {
@@ -22,7 +22,7 @@ export class DepositsService {
     dto: CreateXafDepositDto,
     requestId?: string,
     idempotencyKey?: string,
-  ): Promise<ReepayDeposit> {
+  ): Promise<XafDepositResponse> {
     await this.auth.assertSensitivePin(userId, dto.pin);
     const user = await this.users.findByIdOrThrow(userId);
     const resolvedIdempotencyKey = resolveIdempotencyKey(idempotencyKey);
@@ -37,7 +37,7 @@ export class DepositsService {
       destinationType: dto.network,
     });
 
-    return this.reepay.post<ReepayDeposit>('/v1/deposits/xaf', {
+    const deposit = await this.reepay.post<ReepayDeposit>('/v1/deposits/xaf', {
       requestId,
       idempotencyKey: resolvedIdempotencyKey,
       body: {
@@ -51,6 +51,8 @@ export class DepositsService {
         expiresInSec: dto.expiresInSec ?? 900,
       },
     });
+
+    return this.toXafDepositResponse(deposit);
   }
 
   getDeposit(depositId: string, requestId?: string): Promise<ReepayDeposit> {
@@ -63,5 +65,56 @@ export class DepositsService {
     return this.reepay.post<ReepayDeposit>(`/v1/deposits/${encodeURIComponent(depositId)}/verify`, {
       requestId,
     });
+  }
+
+  private toXafDepositResponse(deposit: ReepayDeposit): XafDepositResponse {
+    const fees = this.getRecord(deposit.fees);
+
+    return {
+      id: this.getString(deposit, ['id', 'depositId']),
+      status: this.getString(deposit, ['status']),
+      checkoutUrl: this.getString(deposit, ['checkoutUrl']),
+      checkoutToken: this.getString(deposit, ['checkoutToken']),
+      creditedAmount: this.getMoneyAmount(deposit.creditedAmount),
+      fees: {
+        provider: this.getMoneyAmount(fees?.provider),
+        reepay: this.getMoneyAmount(fees?.reepay),
+      },
+      totalDebit: this.getMoneyAmount(deposit.totalDebit),
+    };
+  }
+
+  private getString(record: Record<string, unknown>, keys: string[]): string | null {
+    for (const key of keys) {
+      const value = record[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  private getMoneyAmount(value: unknown): MoneyAmount | null {
+    const record = this.getRecord(value);
+    if (!record) {
+      return null;
+    }
+
+    const amount = record.amount;
+    const currency = record.currency;
+
+    if (typeof amount !== 'string' || typeof currency !== 'string') {
+      return null;
+    }
+
+    return {
+      amount,
+      currency,
+    };
+  }
+
+  private getRecord(value: unknown): Record<string, unknown> | null {
+    return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
   }
 }

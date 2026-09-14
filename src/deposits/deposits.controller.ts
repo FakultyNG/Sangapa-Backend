@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthenticatedRequest, AuthenticatedUser } from '../common/types/authenticated-request';
 import { DepositsService } from './deposits.service';
-import { ReepayDeposit } from './deposits.types';
+import { ReepayDeposit, XafDepositResponse } from './deposits.types';
 import { CreateXafDepositDto } from './dto/create-xaf-deposit.dto';
 
 @Controller('deposits')
@@ -18,7 +18,7 @@ export class DepositsController {
     @Req() request: AuthenticatedRequest,
     @Body() dto: CreateXafDepositDto,
     @Headers('idempotency-key') idempotencyKey?: string,
-  ): Promise<ReepayDeposit> {
+  ): Promise<XafDepositResponse> {
     return this.deposits.createXafDeposit(user.id, dto, request.id, idempotencyKey);
   }
 

@@ -68,9 +68,29 @@ OTP is used for registration email verification and password reset only. Login d
 
 Expired session handling:
 
-- If a protected endpoint returns 401 with `Invalid or expired bearer token`, attempt unlock/refresh if a valid refresh token is available and the app policy allows PIN/biometric unlock.
+- If a protected endpoint returns 401 with one of these codes, handle it as an auth/session failure:
+  - `AUTH_MISSING_TOKEN`
+  - `AUTH_TOKEN_EXPIRED`
+  - `AUTH_INVALID_TOKEN`
+  - `AUTH_SESSION_INACTIVE`
 - If refresh/unlock fails, or the refresh session has expired/revoked, clear local auth state and navigate to the login screen automatically.
 - Do not leave the user on wallet, add money, send money, or admin screens after the backend says the session is no longer active.
+
+401 auth error shape:
+
+```json
+{
+  "error": {
+    "code": "AUTH_TOKEN_EXPIRED",
+    "message": "Access token expired",
+    "requestId": "request-id"
+  },
+  "meta": {
+    "timestamp": "2026-09-14T00:00:00.000Z",
+    "path": "/wallet/summary"
+  }
+}
+```
 
 ### Register
 
@@ -455,12 +475,53 @@ Add Money flow:
 - Do not send `customerId`; the backend derives it from the authenticated user.
 - Supported network values depend on Reepay. Use values agreed with backend/Reepay, for example `MTN_CM` for Cameroon MTN Mobile Money.
 - After create, show the returned Reepay deposit status and poll `GET /deposits/:id` or call `POST /deposits/:id/verify` when the product flow requires verification.
+- Do not assume `totalDebit.amount` equals the entered `amount`.
+- Do not calculate deposit fees on the frontend.
+- Reepay calculates fees and total debit; SangaPay Backend returns the frontend-safe Reepay response.
+
+XAF deposit create response:
+
+```json
+{
+  "id": "deposit-id",
+  "status": "pending",
+  "checkoutUrl": "https://checkout.example/deposit-id",
+  "checkoutToken": "checkout-token",
+  "creditedAmount": {
+    "amount": "10000",
+    "currency": "XAF"
+  },
+  "fees": {
+    "provider": {
+      "amount": "0",
+      "currency": "XAF"
+    },
+    "reepay": {
+      "amount": "150",
+      "currency": "XAF"
+    }
+  },
+  "totalDebit": {
+    "amount": "10150",
+    "currency": "XAF"
+  }
+}
+```
+
+UI meaning:
+
+- `creditedAmount.amount`: amount that will be added to the XAF wallet after Reepay confirms the deposit.
+- `fees.reepay.amount`: SangaPay/Reepay service fee.
+- `fees.provider.amount`: provider fee, currently `0` unless Reepay returns otherwise.
+- `totalDebit.amount`: amount the customer must pay through Mobile Money.
+- Reepay credits the wallet only after verified provider webhook/reconciliation. Frontend must not credit balances locally.
 
 ## FX And Wallet Funding
 
 Protected. Use `Idempotency-Key` for quote and confirm operations when available.
 
-- `GET /fx/rates?amount=1000`
+- `GET /fx/rates?amount=1`
+- `GET /fx/rates/eur-xaf?amount=1`
 - `GET /fx/rates/xaf-eur?amount=1000`
 - `GET /fx/rates/xaf-usdc?amount=1000`
 - `POST /wallet/eur/quote`
@@ -474,14 +535,24 @@ Sensitive or money-moving actions should ask for PIN in the UI before sending th
 
 Read-only FX rate endpoints do not require PIN. They still require bearer auth and derive `customerId` from the authenticated user.
 
+Use `GET /fx/rates` or `GET /fx/rates/eur-xaf?amount=1` for the live home-screen EUR rate display. The default display is `1 EUR = <rate> XAF`.
+
 `GET /fx/rates` can return partial data:
 
 ```json
 {
-  "baseCurrency": "XAF",
-  "amount": "1000",
+  "baseCurrency": "EUR",
+  "quoteCurrency": "XAF",
+  "amount": "1",
   "rates": {
-    "xafEur": {},
+    "eurXaf": {
+      "pair": "EUR_XAF",
+      "baseCurrency": "EUR",
+      "quoteCurrency": "XAF",
+      "amount": "1",
+      "rate": "655.957",
+      "rawQuote": {}
+    },
     "xafUsdc": null
   },
   "sourceOfTruth": "REEPAY",
