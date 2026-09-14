@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 
-import { ReepayClientService } from '../reepay-client';
+import { ReepayClientException, ReepayClientService } from '../reepay-client';
 import {
   ReepayFundingInstructions,
   ReepayRecentTransactions,
   ReepayWalletBalance,
   ReepayWalletDetails,
   TotalWalletSummary,
+  WalletFetchError,
 } from './wallet.types';
 
 @Injectable()
@@ -42,20 +43,30 @@ export class WalletService {
   }
 
   async getSummary(customerId: string, requestId?: string): Promise<TotalWalletSummary> {
-    const [xaf, eur, usdc] = await Promise.all([
+    const [xaf, eur, usdc] = await Promise.allSettled([
       this.getXafWallet(customerId, requestId),
       this.getEurWallet(customerId, requestId),
       this.getUsdcWallet(customerId, requestId),
     ]);
+    const walletErrors: TotalWalletSummary['walletErrors'] = {
+      xaf: this.getWalletError(xaf),
+      eur: this.getWalletError(eur),
+      usdc: this.getWalletError(usdc),
+    };
+    const filteredErrors = Object.fromEntries(
+      Object.entries(walletErrors).filter(([, error]) => error),
+    ) as NonNullable<TotalWalletSummary['walletErrors']>;
+    const partial = Object.keys(filteredErrors).length > 0;
 
     return {
       customerId,
       wallets: {
-        xaf,
-        eur,
-        usdc,
+        xaf: xaf.status === 'fulfilled' ? xaf.value : null,
+        eur: eur.status === 'fulfilled' ? eur.value : null,
+        usdc: usdc.status === 'fulfilled' ? usdc.value : null,
       },
       sourceOfTruth: 'REEPAY',
+      ...(partial ? { partial, walletErrors: filteredErrors } : {}),
     };
   }
 
@@ -78,5 +89,36 @@ export class WalletService {
       query: { customerId, limit },
       requestId,
     });
+  }
+
+  private getWalletError(
+    result: PromiseSettledResult<ReepayWalletDetails>,
+  ): WalletFetchError | undefined {
+    if (result.status === 'fulfilled') {
+      return undefined;
+    }
+
+    if (result.reason instanceof ReepayClientException) {
+      const response = result.reason.getResponse();
+      if (this.isRecord(response) && this.isRecord(response.error)) {
+        return {
+          code: typeof response.error.code === 'string' ? response.error.code : 'REEPAY_ERROR',
+          message:
+            typeof response.error.message === 'string'
+              ? response.error.message
+              : 'Unable to fetch wallet from Reepay',
+        };
+      }
+    }
+
+    return {
+      code: 'WALLET_FETCH_FAILED',
+      message:
+        result.reason instanceof Error ? result.reason.message : 'Unable to fetch wallet from Reepay',
+    };
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 }
