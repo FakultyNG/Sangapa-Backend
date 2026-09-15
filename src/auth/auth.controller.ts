@@ -26,10 +26,14 @@ import { UpdateBiometricSettingDto } from './dto/update-biometric-setting.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { VerifyPinDto } from './dto/verify-pin.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { SessionPolicy, SessionPolicyService } from './session-policy.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly sessionPolicy: SessionPolicyService,
+  ) {}
 
   @Post('register')
   register(@Body() dto: RegisterDto): Promise<OtpChallengeResponse> {
@@ -149,5 +153,10 @@ export class AuthController {
     @Body() dto: VerifyPinDto,
   ): Promise<PinVerificationResponse> {
     return this.auth.verifyPin(user.id, dto.pin);
+  }
+
+  @Get('session-settings')
+  getSessionSettings(): Promise<SessionPolicy> {
+    return this.sessionPolicy.getPolicy();
   }
 }

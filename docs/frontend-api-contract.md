@@ -60,9 +60,23 @@ Use bearer auth for protected endpoints:
 Authorization: Bearer <accessToken>
 ```
 
-Access tokens last 5 minutes.
+Access token, refresh session, and app lock timings are backend-controlled.
 
-Refresh sessions can last up to 5 days of inactivity. After 5 minutes, or after the app is closed, the frontend should require PIN or biometric unlock instead of asking for email/password again. Email/password login is required again after logout, revoked sessions, or 5 days of inactivity.
+Frontend should read the active values from:
+
+`GET /auth/session-settings`
+
+```json
+{
+  "accessTokenTtlSec": 300,
+  "refreshTokenInactivityTtlSec": 432000,
+  "appLockTtlSec": 300
+}
+```
+
+Defaults are 5 minutes for access tokens, 5 days for refresh-session inactivity, and 5 minutes for app lock. Admins can change these from `GET /admin/session-settings` and `PATCH /admin/session-settings`.
+
+After `appLockTtlSec`, or immediately after the app is closed, the frontend should require PIN or biometric unlock instead of asking for email/password again. Email/password login is required again after logout, revoked sessions, or refresh-session inactivity expiry.
 
 OTP is used for registration email verification and password reset only. Login does not require OTP.
 
@@ -75,6 +89,7 @@ Expired session handling:
   - `AUTH_SESSION_INACTIVE`
 - If refresh/unlock fails, or the refresh session has expired/revoked, clear local auth state and navigate to the login screen automatically.
 - Do not leave the user on wallet, add money, send money, or admin screens after the backend says the session is no longer active.
+- Apply this globally in the API client/interceptor and route guard, not per page.
 
 401 auth error shape:
 
@@ -160,6 +175,8 @@ If the user is still inside the resend cooldown, the backend returns success wit
   "password": "password"
 }
 ```
+
+Use the returned `expiresInSec` as the access-token expiry timer for this session. It reflects the current backend/admin setting.
 
 Returns:
 
@@ -841,6 +858,38 @@ Important:
 - These are database-backed dashboard overrides.
 - Do not expose raw secrets in the UI.
 - Do not assume this mutates process environment variables immediately unless the backend later documents runtime reload behavior.
+
+### Admin Session Settings
+
+`GET /admin/session-settings`
+
+Returns:
+
+```json
+{
+  "accessTokenTtlSec": 300,
+  "refreshTokenInactivityTtlSec": 432000,
+  "appLockTtlSec": 300
+}
+```
+
+`PATCH /admin/session-settings`
+
+```json
+{
+  "accessTokenTtlSec": 300,
+  "refreshTokenInactivityTtlSec": 432000,
+  "appLockTtlSec": 300
+}
+```
+
+All values are seconds. Any field may be omitted. Admin session settings are stored in dashboard-managed environment overrides using non-sensitive keys:
+
+- `SANGAPAY_ACCESS_TOKEN_TTL_SEC`
+- `SANGAPAY_SESSION_INACTIVITY_TTL_SEC`
+- `SANGAPAY_APP_LOCK_TTL_SEC`
+
+The backend uses these values when issuing new access tokens, extending refresh sessions, and checking refresh-session inactivity.
 
 ### Admin Endpoint Inventory
 

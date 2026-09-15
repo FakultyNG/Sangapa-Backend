@@ -4,10 +4,14 @@ import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from './jwt-payload';
+import { SessionPolicyService } from './session-policy.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sessionPolicy: SessionPolicyService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -46,6 +50,12 @@ export class JwtAuthGuard implements CanActivate {
 
     if (!session) {
       throw this.unauthorized('AUTH_SESSION_INACTIVE', 'Session is no longer active');
+    }
+
+    const policy = await this.sessionPolicy.getPolicy();
+    const inactiveForMs = Date.now() - session.lastUsedAt.getTime();
+    if (inactiveForMs > policy.refreshTokenInactivityTtlSec * 1000) {
+      throw this.unauthorized('AUTH_SESSION_INACTIVE', 'Session expired due to inactivity');
     }
 
     request.user = {

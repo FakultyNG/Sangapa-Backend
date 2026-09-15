@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AuthModule } from '../auth/auth.module';
 import { KycModule } from '../kyc/kyc.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { UploadsModule } from '../common/uploads/uploads.module';
@@ -10,7 +11,7 @@ import { AdminBootstrapService } from './admin-bootstrap.service';
 import { AdminService } from './admin.service';
 
 @Module({
-  imports: [PrismaModule, UsersModule, KycModule, UploadsModule, WalletModule],
+  imports: [PrismaModule, UsersModule, KycModule, UploadsModule, WalletModule, AuthModule],
   controllers: [AdminController],
   providers: [AdminService, AdminBootstrapService],
 })

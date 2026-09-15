@@ -29,8 +29,10 @@ import { ListAdminUsersQueryDto } from './dto/list-admin-users-query.dto';
 import { ListKycQueryDto } from './dto/list-kyc-query.dto';
 import { RejectKycDto } from './dto/reject-kyc.dto';
 import { UpdateAdminEnvDto } from './dto/update-admin-env.dto';
+import { UpdateSessionPolicyDto } from './dto/update-session-policy.dto';
 import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
 import { UpdateUserLimitsDto } from './dto/update-user-limits.dto';
+import { SessionPolicy } from '../auth/session-policy.service';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -130,6 +132,19 @@ export class AdminController {
     @Body() dto: UpdateAdminEnvDto,
   ) {
     return this.admin.updateEnvironmentVariable(adminUser.id, dto);
+  }
+
+  @Get('session-settings')
+  getSessionSettings(): Promise<SessionPolicy> {
+    return this.admin.getSessionPolicy();
+  }
+
+  @Patch('session-settings')
+  updateSessionSettings(
+    @CurrentUser() adminUser: AuthenticatedUser,
+    @Body() dto: UpdateSessionPolicyDto,
+  ): Promise<SessionPolicy> {
+    return this.admin.updateSessionPolicy(adminUser.id, dto);
   }
 
   @Get('dashboard/endpoints')

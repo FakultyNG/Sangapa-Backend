@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
+import { SessionPolicyService } from '../auth/session-policy.service';
 import { UploadsService } from '../common/uploads/uploads.service';
 import { KycService } from '../kyc/kyc.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -33,6 +34,13 @@ describe('AdminService', () => {
         { provide: KycService, useValue: {} },
         { provide: UploadsService, useValue: {} },
         { provide: WalletService, useValue: {} },
+        {
+          provide: SessionPolicyService,
+          useValue: {
+            getPolicy: jest.fn(),
+            updatePolicy: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

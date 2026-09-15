@@ -9,6 +9,7 @@ import * as bcrypt from 'bcryptjs';
 
 import { UploadedFile } from '../common/uploads/uploaded-file';
 import { UploadsService } from '../common/uploads/uploads.service';
+import { SessionPolicy, SessionPolicyService, UpdateSessionPolicy } from '../auth/session-policy.service';
 import { KycService } from '../kyc/kyc.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PublicUser, UsersService } from '../users/users.service';
@@ -29,6 +30,7 @@ export class AdminService {
     private readonly kyc: KycService,
     private readonly uploads: UploadsService,
     private readonly wallet: WalletService,
+    private readonly sessionPolicy: SessionPolicyService,
   ) {}
 
   async listUsers(query: ListAdminUsersQueryDto): Promise<PublicUser[]> {
@@ -210,6 +212,14 @@ export class AdminService {
     return this.kyc.reject(id, adminUserId, reason);
   }
 
+  getSessionPolicy(): Promise<SessionPolicy> {
+    return this.sessionPolicy.getPolicy();
+  }
+
+  updateSessionPolicy(adminUserId: string, update: UpdateSessionPolicy): Promise<SessionPolicy> {
+    return this.sessionPolicy.updatePolicy(adminUserId, update);
+  }
+
   listDashboardEndpoints(): { method: string; path: string; purpose: string }[] {
     return [
       {
@@ -267,6 +277,16 @@ export class AdminService {
         purpose: 'List dashboard-managed environment overrides',
       },
       { method: 'PATCH', path: '/admin/env', purpose: 'Create or update an environment override' },
+      {
+        method: 'GET',
+        path: '/admin/session-settings',
+        purpose: 'View access token, refresh session, and app lock timing settings',
+      },
+      {
+        method: 'PATCH',
+        path: '/admin/session-settings',
+        purpose: 'Update access token, refresh session, and app lock timing settings',
+      },
       {
         method: 'GET',
         path: '/admin/dashboard/endpoints',

@@ -27,6 +27,7 @@ import { UnlockWithPinDto } from './dto/unlock-with-pin.dto';
 import { UpdateBiometricSettingDto } from './dto/update-biometric-setting.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtPayload } from './jwt-payload';
+import { SessionPolicyService } from './session-policy.service';
 
 export type OtpChallengeResponse = {
   success: true;
@@ -63,8 +64,6 @@ export type BiometricChallengeResponse = {
 const OTP_TTL_SEC = 10 * 60;
 const OTP_RESEND_COOLDOWN_SEC = 60;
 const OTP_MAX_ATTEMPTS = 5;
-const ACCESS_TOKEN_TTL_SEC = 5 * 60;
-const REFRESH_TOKEN_INACTIVITY_TTL_SEC = 5 * 24 * 60 * 60;
 const BIOMETRIC_CHALLENGE_TTL_SEC = 5 * 60;
 
 @Injectable()
@@ -74,6 +73,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly email: EmailService,
     private readonly users: UsersService,
+    private readonly sessionPolicy: SessionPolicyService,
   ) {}
 
   async register(dto: RegisterDto): Promise<OtpChallengeResponse> {
@@ -166,8 +166,9 @@ export class AuthService {
 
       await this.assertActiveVerifiedUser(session.user);
       await this.assertSensitivePin(session.userId, pin);
-      this.assertSessionStillActive(session.lastUsedAt, now);
-      const expiresAt = this.sessionExpiresAt(now);
+      await this.assertSessionStillActive(session.lastUsedAt, now);
+      const policy = await this.sessionPolicy.getPolicy();
+      const expiresAt = this.sessionExpiresAt(now, policy.refreshTokenInactivityTtlSec);
       await this.prisma.session.update({
         where: { id: session.id },
         data: {
@@ -175,13 +176,17 @@ export class AuthService {
           expiresAt,
         },
       });
-      const accessToken = await this.signAccessToken(session.user, session.id);
+      const accessToken = await this.signAccessToken(
+        session.user,
+        session.id,
+        policy.accessTokenTtlSec,
+      );
 
       return {
         accessToken,
         refreshToken,
         tokenType: 'Bearer',
-        expiresInSec: ACCESS_TOKEN_TTL_SEC,
+        expiresInSec: policy.accessTokenTtlSec,
         user: this.users.toPublicUser(session.user),
       };
     }
@@ -195,20 +200,25 @@ export class AuthService {
     await this.assertActiveVerifiedUser(session.user);
 
     const now = new Date();
-    this.assertSessionStillActive(session.lastUsedAt, now);
+    await this.assertSessionStillActive(session.lastUsedAt, now);
+    const policy = await this.sessionPolicy.getPolicy();
     await this.prisma.session.update({
       where: { id: session.id },
       data: {
         lastUsedAt: now,
-        expiresAt: this.sessionExpiresAt(now),
+        expiresAt: this.sessionExpiresAt(now, policy.refreshTokenInactivityTtlSec),
       },
     });
 
     return {
-      accessToken: await this.signAccessToken(session.user, session.id),
+      accessToken: await this.signAccessToken(
+        session.user,
+        session.id,
+        policy.accessTokenTtlSec,
+      ),
       refreshToken,
       tokenType: 'Bearer',
-      expiresInSec: ACCESS_TOKEN_TTL_SEC,
+      expiresInSec: policy.accessTokenTtlSec,
       user: this.users.toPublicUser(session.user),
     };
   }
@@ -432,7 +442,8 @@ export class AuthService {
     const refreshToken = randomUUID() + randomUUID();
     const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
     const now = new Date();
-    const expiresAt = this.sessionExpiresAt(now);
+    const policy = await this.sessionPolicy.getPolicy();
+    const expiresAt = this.sessionExpiresAt(now, policy.refreshTokenInactivityTtlSec);
 
     const session = await this.prisma.session.create({
       data: {
@@ -444,18 +455,22 @@ export class AuthService {
         ipAddress: request.ip,
       },
     });
-    const accessToken = await this.signAccessToken(user, session.id);
+    const accessToken = await this.signAccessToken(user, session.id, policy.accessTokenTtlSec);
 
     return {
       accessToken,
       refreshToken,
       tokenType: 'Bearer',
-      expiresInSec: ACCESS_TOKEN_TTL_SEC,
+      expiresInSec: policy.accessTokenTtlSec,
       user: this.users.toPublicUser(user),
     };
   }
 
-  private async signAccessToken(user: User, sessionId: string): Promise<string> {
+  private async signAccessToken(
+    user: User,
+    sessionId: string,
+    accessTokenTtlSec?: number,
+  ): Promise<string> {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -463,8 +478,10 @@ export class AuthService {
       role: user.role,
     };
 
+    const expiresIn = accessTokenTtlSec ?? (await this.sessionPolicy.getPolicy()).accessTokenTtlSec;
+
     return jwt.sign(payload, this.config.getOrThrow<string>('JWT_ACCESS_SECRET'), {
-      expiresIn: ACCESS_TOKEN_TTL_SEC,
+      expiresIn,
     });
   }
 
@@ -496,15 +513,16 @@ export class AuthService {
     throw new UnauthorizedException('Invalid or expired refresh token');
   }
 
-  private assertSessionStillActive(lastUsedAt: Date, now = new Date()): void {
+  private async assertSessionStillActive(lastUsedAt: Date, now = new Date()): Promise<void> {
+    const policy = await this.sessionPolicy.getPolicy();
     const inactiveForMs = now.getTime() - lastUsedAt.getTime();
-    if (inactiveForMs > REFRESH_TOKEN_INACTIVITY_TTL_SEC * 1000) {
+    if (inactiveForMs > policy.refreshTokenInactivityTtlSec * 1000) {
       throw new UnauthorizedException('Session expired due to inactivity');
     }
   }
 
-  private sessionExpiresAt(now = new Date()): Date {
-    return new Date(now.getTime() + REFRESH_TOKEN_INACTIVITY_TTL_SEC * 1000);
+  private sessionExpiresAt(now = new Date(), ttlSec: number): Date {
+    return new Date(now.getTime() + ttlSec * 1000);
   }
 
   private verifyBiometricSignature(
