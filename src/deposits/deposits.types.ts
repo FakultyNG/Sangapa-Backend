@@ -12,9 +12,14 @@ export type DepositFees = {
 
 export type XafDepositResponse = {
   id: string | null;
+  reference: string | null;
+  amount: string | null;
+  currency: string | null;
   status: string | null;
   checkoutUrl: string | null;
   checkoutToken: string | null;
+  expiresAt: string | null;
+  expiresInSec: number | null;
   creditedAmount: MoneyAmount | null;
   fees: DepositFees;
   totalDebit: MoneyAmount | null;

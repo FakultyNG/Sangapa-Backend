@@ -69,9 +69,14 @@ describe('DepositsService', () => {
     });
     reepay.post.mockResolvedValueOnce({
       id: 'deposit-id',
+      reference: 'deposit-reference',
+      amount: '10000',
+      currency: 'XAF',
       status: 'pending',
       checkoutUrl: 'https://checkout.example/deposit-id',
       checkoutToken: 'checkout-token',
+      expiresAt: '2026-09-15T12:00:00.000Z',
+      expiresInSec: 900,
       creditedAmount: { amount: '10000', currency: 'XAF' },
       fees: {
         provider: { amount: '0', currency: 'XAF' },
@@ -95,9 +100,14 @@ describe('DepositsService', () => {
       ),
     ).resolves.toEqual({
       id: 'deposit-id',
+      reference: 'deposit-reference',
+      amount: '10000',
+      currency: 'XAF',
       status: 'pending',
       checkoutUrl: 'https://checkout.example/deposit-id',
       checkoutToken: 'checkout-token',
+      expiresAt: '2026-09-15T12:00:00.000Z',
+      expiresInSec: 900,
       creditedAmount: { amount: '10000', currency: 'XAF' },
       fees: {
         provider: { amount: '0', currency: 'XAF' },
@@ -157,9 +167,14 @@ describe('DepositsService', () => {
       ),
     ).resolves.toEqual({
       id: 'deposit-id',
+      reference: null,
+      amount: null,
+      currency: null,
       status: 'pending',
       checkoutUrl: null,
       checkoutToken: null,
+      expiresAt: null,
+      expiresInSec: null,
       creditedAmount: null,
       fees: {
         provider: null,
@@ -167,6 +182,43 @@ describe('DepositsService', () => {
       },
       totalDebit: null,
     });
+  });
+
+  it('exposes totalDebit as the Mobile Money payment amount separately from wallet credit amount', async () => {
+    users.findByIdOrThrow.mockResolvedValueOnce({
+      id: 'user-id',
+      email: 'user@example.com',
+      fullName: null,
+    });
+    reepay.post.mockResolvedValueOnce({
+      id: 'deposit-id',
+      amount: '10000',
+      currency: 'XAF',
+      creditedAmount: { amount: '10000', currency: 'XAF' },
+      fees: {
+        provider: { amount: '0', currency: 'XAF' },
+        reepay: { amount: '150', currency: 'XAF' },
+      },
+      totalDebit: { amount: '10150', currency: 'XAF' },
+      status: 'pending',
+    });
+
+    const response = await service.createXafDeposit(
+      'user-id',
+      {
+        amount: '10000',
+        network: 'MTN_CM',
+        phoneNumber: '237670000000',
+        pin: '1234',
+      },
+      'request-id',
+      'idem-key',
+    );
+
+    expect(response.amount).toBe('10000');
+    expect(response.creditedAmount).toEqual({ amount: '10000', currency: 'XAF' });
+    expect(response.fees.reepay).toEqual({ amount: '150', currency: 'XAF' });
+    expect(response.totalDebit).toEqual({ amount: '10150', currency: 'XAF' });
   });
 
   it('fetches deposit status from Reepay', async () => {
@@ -178,10 +230,42 @@ describe('DepositsService', () => {
     });
   });
 
-  it('verifies deposit through Reepay', async () => {
-    reepay.post.mockResolvedValueOnce({ id: 'deposit-id', status: 'completed' });
+  it('verifies deposit through Reepay and returns refreshed frontend-safe status', async () => {
+    reepay.post.mockResolvedValueOnce({
+      id: 'deposit-id',
+      reference: 'deposit-reference',
+      amount: '10000',
+      currency: 'XAF',
+      creditedAmount: { amount: '10000', currency: 'XAF' },
+      fees: {
+        provider: { amount: '0', currency: 'XAF' },
+        reepay: { amount: '150', currency: 'XAF' },
+      },
+      totalDebit: { amount: '10150', currency: 'XAF' },
+      status: 'completed',
+      checkoutUrl: 'https://checkout.example/deposit-id',
+      checkoutToken: 'checkout-token',
+      expiresAt: '2026-09-15T12:00:00.000Z',
+      expiresInSec: 900,
+    });
 
-    await service.verifyDeposit('deposit-id', 'request-id');
+    await expect(service.verifyDeposit('deposit-id', 'request-id')).resolves.toEqual({
+      id: 'deposit-id',
+      reference: 'deposit-reference',
+      amount: '10000',
+      currency: 'XAF',
+      creditedAmount: { amount: '10000', currency: 'XAF' },
+      fees: {
+        provider: { amount: '0', currency: 'XAF' },
+        reepay: { amount: '150', currency: 'XAF' },
+      },
+      totalDebit: { amount: '10150', currency: 'XAF' },
+      status: 'completed',
+      checkoutUrl: 'https://checkout.example/deposit-id',
+      checkoutToken: 'checkout-token',
+      expiresAt: '2026-09-15T12:00:00.000Z',
+      expiresInSec: 900,
+    });
     expect(reepay.post).toHaveBeenCalledWith('/v1/deposits/deposit-id/verify', {
       requestId: 'request-id',
     });

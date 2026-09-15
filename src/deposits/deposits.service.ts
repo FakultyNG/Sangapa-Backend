@@ -61,10 +61,12 @@ export class DepositsService {
     });
   }
 
-  verifyDeposit(depositId: string, requestId?: string): Promise<ReepayDeposit> {
-    return this.reepay.post<ReepayDeposit>(`/v1/deposits/${encodeURIComponent(depositId)}/verify`, {
+  async verifyDeposit(depositId: string, requestId?: string): Promise<XafDepositResponse> {
+    const deposit = await this.reepay.post<ReepayDeposit>(`/v1/deposits/${encodeURIComponent(depositId)}/verify`, {
       requestId,
     });
+
+    return this.toXafDepositResponse(deposit);
   }
 
   private toXafDepositResponse(deposit: ReepayDeposit): XafDepositResponse {
@@ -72,9 +74,14 @@ export class DepositsService {
 
     return {
       id: this.getString(deposit, ['id', 'depositId']),
+      reference: this.getString(deposit, ['reference', 'depositReference', 'paymentReference']),
+      amount: this.getString(deposit, ['amount']),
+      currency: this.getString(deposit, ['currency']),
       status: this.getString(deposit, ['status']),
       checkoutUrl: this.getString(deposit, ['checkoutUrl']),
       checkoutToken: this.getString(deposit, ['checkoutToken']),
+      expiresAt: this.getString(deposit, ['expiresAt']),
+      expiresInSec: this.getNumber(deposit, ['expiresInSec']),
       creditedAmount: this.getMoneyAmount(deposit.creditedAmount),
       fees: {
         provider: this.getMoneyAmount(fees?.provider),
@@ -88,6 +95,17 @@ export class DepositsService {
     for (const key of keys) {
       const value = record[key];
       if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  private getNumber(record: Record<string, unknown>, keys: string[]): number | null {
+    for (const key of keys) {
+      const value = record[key];
+      if (typeof value === 'number' && Number.isFinite(value)) {
         return value;
       }
     }

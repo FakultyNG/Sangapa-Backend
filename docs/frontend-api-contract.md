@@ -484,9 +484,14 @@ XAF deposit create response:
 ```json
 {
   "id": "deposit-id",
+  "reference": "deposit-reference",
+  "amount": "10000",
+  "currency": "XAF",
   "status": "pending",
   "checkoutUrl": "https://checkout.example/deposit-id",
   "checkoutToken": "checkout-token",
+  "expiresAt": "2026-09-15T12:00:00.000Z",
+  "expiresInSec": 900,
   "creditedAmount": {
     "amount": "10000",
     "currency": "XAF"
@@ -511,10 +516,23 @@ XAF deposit create response:
 UI meaning:
 
 - `creditedAmount.amount`: amount that will be added to the XAF wallet after Reepay confirms the deposit.
+- `amount`: original wallet-credit amount sent to Reepay.
 - `fees.reepay.amount`: SangaPay/Reepay service fee.
 - `fees.provider.amount`: provider fee, currently `0` unless Reepay returns otherwise.
 - `totalDebit.amount`: amount the customer must pay through Mobile Money.
+- `id` / `reference`: Reepay deposit identifiers for status checks and receipts.
+- `expiresAt`: preferred countdown deadline when Reepay returns it.
+- `expiresInSec`: fallback countdown duration from creation time when `expiresAt` is absent.
 - Reepay credits the wallet only after verified provider webhook/reconciliation. Frontend must not credit balances locally.
+
+Manual deposit status refresh:
+
+- Frontend should show a reload/check-payment button while deposit status is `pending` or `processing`.
+- On click, call `POST /deposits/:id/verify`.
+- SangaPay Backend calls Reepay `POST /v1/deposits/:depositId/verify` and returns the refreshed frontend-safe deposit response.
+- If verify returns `completed`, refresh wallet balance/summary from SangaPay Backend.
+- If verify returns `failed`, `cancelled`, or `refunded`, show a terminal failure state.
+- Webhooks still exist at `POST /webhooks/reepay`, but frontend must support manual verify because provider webhooks can be delayed or missed.
 
 ## FX And Wallet Funding
 

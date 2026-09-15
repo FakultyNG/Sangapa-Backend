@@ -34,7 +34,7 @@ export class DepositsController {
   verifyDeposit(
     @Param('id') depositId: string,
     @Req() request: AuthenticatedRequest,
-  ): Promise<ReepayDeposit> {
+  ): Promise<XafDepositResponse> {
     return this.deposits.verifyDeposit(depositId, request.id);
   }
 }
