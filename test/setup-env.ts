@@ -6,3 +6,4 @@ process.env.REEPAY_BASE_URL ??= 'https://reepay.fakultyng.online';
 process.env.SANGAPAY_REEPAY_API_KEY ??= 'test-api-key';
 process.env.SANGAPAY_REEPAY_APPLICATION_ID ??= 'sangapay-backend';
 process.env.REEPAY_WEBHOOK_SECRET ??= 'test-webhook-secret';
+process.env.SANGAPAY_WEBHOOK_SECRET ??= 'test-webhook-secret';

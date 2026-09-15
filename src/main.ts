@@ -28,6 +28,7 @@ async function bootstrap(): Promise<void> {
   app.use(
     [
       '/deposits/xaf',
+      '/deposits/xaf/preview',
       '/wallet/eur/quote',
       '/wallet/eur/confirm',
       '/wallet/usdc/quote',

@@ -144,7 +144,11 @@ export class ReepayWebhookService {
       return false;
     }
 
-    const expected = createHmac('sha256', this.config.getOrThrow<string>('REEPAY_WEBHOOK_SECRET'))
+    const secret =
+      this.config.get<string>('SANGAPAY_WEBHOOK_SECRET') ??
+      this.config.getOrThrow<string>('REEPAY_WEBHOOK_SECRET');
+
+    const expected = createHmac('sha256', secret)
       .update(rawBody)
       .digest('hex');
 

@@ -221,10 +221,79 @@ describe('DepositsService', () => {
     expect(response.totalDebit).toEqual({ amount: '10150', currency: 'XAF' });
   });
 
-  it('fetches deposit status from Reepay', async () => {
-    reepay.get.mockResolvedValueOnce({ id: 'deposit-id' });
+  it('previews XAF deposit fees through Reepay without PIN or frontend customerId', async () => {
+    users.findByIdOrThrow.mockResolvedValueOnce({
+      id: 'user-id',
+      email: 'user@example.com',
+      fullName: null,
+    });
+    reepay.post.mockResolvedValueOnce({
+      amount: '10000',
+      currency: 'XAF',
+      creditedAmount: { amount: '10000', currency: 'XAF' },
+      fees: {
+        provider: { amount: '0', currency: 'XAF' },
+        reepay: { amount: '150', currency: 'XAF' },
+      },
+      totalDebit: { amount: '10150', currency: 'XAF' },
+      status: 'quoted',
+    });
 
-    await service.getDeposit('deposit-id', 'request-id');
+    await expect(
+      service.previewXafDeposit(
+        'user-id',
+        {
+          amount: '10000',
+          network: 'MTN_CM',
+        },
+        'request-id',
+      ),
+    ).resolves.toMatchObject({
+      amount: '10000',
+      creditedAmount: { amount: '10000', currency: 'XAF' },
+      fees: {
+        provider: { amount: '0', currency: 'XAF' },
+        reepay: { amount: '150', currency: 'XAF' },
+      },
+      totalDebit: { amount: '10150', currency: 'XAF' },
+    });
+
+    expect(auth.assertSensitivePin).not.toHaveBeenCalled();
+    expect(reepay.post).toHaveBeenCalledWith('/v1/deposits/xaf/quote', {
+      requestId: 'request-id',
+      body: {
+        customerId: 'user-id',
+        amount: '10000',
+        network: 'MTN_CM',
+      },
+    });
+  });
+
+  it('fetches frontend-safe deposit status from Reepay', async () => {
+    reepay.get.mockResolvedValueOnce({
+      id: 'deposit-id',
+      amount: '10000',
+      currency: 'XAF',
+      creditedAmount: { amount: '10000', currency: 'XAF' },
+      fees: {
+        provider: { amount: '0', currency: 'XAF' },
+        reepay: { amount: '150', currency: 'XAF' },
+      },
+      totalDebit: { amount: '10150', currency: 'XAF' },
+      status: 'pending',
+    });
+
+    await expect(service.getDeposit('deposit-id', 'request-id')).resolves.toMatchObject({
+      id: 'deposit-id',
+      amount: '10000',
+      creditedAmount: { amount: '10000', currency: 'XAF' },
+      fees: {
+        provider: { amount: '0', currency: 'XAF' },
+        reepay: { amount: '150', currency: 'XAF' },
+      },
+      totalDebit: { amount: '10150', currency: 'XAF' },
+      status: 'pending',
+    });
     expect(reepay.get).toHaveBeenCalledWith('/v1/deposits/deposit-id', {
       requestId: 'request-id',
     });

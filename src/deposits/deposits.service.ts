@@ -6,6 +6,7 @@ import { resolveIdempotencyKey } from '../common/utils/idempotency-key.util';
 import { ReepayClientService } from '../reepay-client';
 import { UsersService } from '../users/users.service';
 import { CreateXafDepositDto } from './dto/create-xaf-deposit.dto';
+import { PreviewXafDepositDto } from './dto/preview-xaf-deposit.dto';
 import { MoneyAmount, ReepayDeposit, XafDepositResponse } from './deposits.types';
 
 @Injectable()
@@ -55,10 +56,31 @@ export class DepositsService {
     return this.toXafDepositResponse(deposit);
   }
 
-  getDeposit(depositId: string, requestId?: string): Promise<ReepayDeposit> {
-    return this.reepay.get<ReepayDeposit>(`/v1/deposits/${encodeURIComponent(depositId)}`, {
+  async previewXafDeposit(
+    userId: string,
+    dto: PreviewXafDepositDto,
+    requestId?: string,
+  ): Promise<XafDepositResponse> {
+    const user = await this.users.findByIdOrThrow(userId);
+
+    const deposit = await this.reepay.post<ReepayDeposit>('/v1/deposits/xaf/quote', {
+      requestId,
+      body: {
+        customerId: user.id,
+        amount: dto.amount,
+        network: dto.network,
+      },
+    });
+
+    return this.toXafDepositResponse(deposit);
+  }
+
+  async getDeposit(depositId: string, requestId?: string): Promise<XafDepositResponse> {
+    const deposit = await this.reepay.get<ReepayDeposit>(`/v1/deposits/${encodeURIComponent(depositId)}`, {
       requestId,
     });
+
+    return this.toXafDepositResponse(deposit);
   }
 
   async verifyDeposit(depositId: string, requestId?: string): Promise<XafDepositResponse> {

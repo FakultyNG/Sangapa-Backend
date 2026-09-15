@@ -47,6 +47,7 @@ describe('ReepayWebhookService', () => {
         {
           provide: ConfigService,
           useValue: {
+            get: () => 'webhook-secret',
             getOrThrow: () => 'webhook-secret',
           },
         },
