@@ -191,6 +191,20 @@ describe('DepositsService', () => {
       totalFee: null,
       totalDebit: null,
     });
+    expect(reepay.post).toHaveBeenCalledWith('/v1/deposits/xaf', {
+      requestId: 'request-id',
+      idempotencyKey: 'idem-key',
+      body: {
+        customerId: 'user-id',
+        amount: '10000',
+        network: 'MTN_CM',
+        phoneNumber: '237670000000',
+        fullName: undefined,
+        email: 'user@example.com',
+        redirectUrl: undefined,
+        expiresInSec: 180,
+      },
+    });
   });
 
   it('exposes totalDebit as the Mobile Money payment amount separately from wallet credit amount', async () => {

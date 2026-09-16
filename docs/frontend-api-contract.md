@@ -472,7 +472,7 @@ Protected. Use `Idempotency-Key` for create operations when available.
   "fullName": "User Name",
   "email": "user@example.com",
   "redirectUrl": "https://frontend.example.com/deposits/return",
-  "expiresInSec": 900,
+  "expiresInSec": 180,
   "pin": "1234"
 }
 ```
@@ -508,7 +508,7 @@ XAF deposit create response:
   "checkoutUrl": "https://checkout.example/deposit-id",
   "checkoutToken": "checkout-token",
   "expiresAt": "2026-09-15T12:00:00.000Z",
-  "expiresInSec": 900,
+  "expiresInSec": 180,
   "creditedAmount": {
     "amount": "10000",
     "currency": "XAF"
