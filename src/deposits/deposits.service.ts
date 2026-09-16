@@ -111,7 +111,7 @@ export class DepositsService {
         provider: providerFee,
         reepay: reepayFee,
       },
-      totalFee: this.getTotalFee(providerFee, reepayFee),
+      totalFee: this.getMoneyAmount(deposit.totalFee),
       totalDebit: this.getMoneyAmount(deposit.totalDebit),
     };
   }
@@ -155,72 +155,6 @@ export class DepositsService {
       amount,
       currency,
     };
-  }
-
-  private getTotalFee(providerFee: MoneyAmount | null, reepayFee: MoneyAmount | null): MoneyAmount | null {
-    const fees = [providerFee, reepayFee].filter((fee): fee is MoneyAmount => fee !== null);
-
-    if (fees.length === 0) {
-      return null;
-    }
-
-    const currency = fees[0].currency;
-    if (!fees.every((fee) => fee.currency === currency)) {
-      return null;
-    }
-
-    const totalFee = fees.reduce<string | null>(
-      (total, fee) => (total === null ? null : this.addDecimalStrings(total, fee.amount)),
-      '0',
-    );
-
-    if (totalFee === null) {
-      return null;
-    }
-
-    return {
-      amount: totalFee,
-      currency,
-    };
-  }
-
-  private addDecimalStrings(left: string, right: string): string | null {
-    const leftParts = this.parseDecimalAmount(left);
-    const rightParts = this.parseDecimalAmount(right);
-    if (!leftParts || !rightParts) {
-      return null;
-    }
-
-    const scale = Math.max(leftParts.scale, rightParts.scale);
-    const leftUnits = leftParts.units * 10n ** BigInt(scale - leftParts.scale);
-    const rightUnits = rightParts.units * 10n ** BigInt(scale - rightParts.scale);
-
-    return this.formatDecimalAmount(leftUnits + rightUnits, scale);
-  }
-
-  private parseDecimalAmount(amount: string): { units: bigint; scale: number } | null {
-    const normalized = amount.trim();
-    if (!/^\d+(\.\d+)?$/.test(normalized)) {
-      return null;
-    }
-
-    const [whole, fraction = ''] = normalized.split('.');
-    return {
-      units: BigInt(`${whole}${fraction}`),
-      scale: fraction.length,
-    };
-  }
-
-  private formatDecimalAmount(units: bigint, scale: number): string {
-    if (scale === 0) {
-      return units.toString();
-    }
-
-    const raw = units.toString().padStart(scale + 1, '0');
-    const whole = raw.slice(0, -scale);
-    const fraction = raw.slice(-scale).replace(/0+$/, '');
-
-    return fraction ? `${whole}.${fraction}` : whole;
   }
 
   private getRecord(value: unknown): Record<string, unknown> | null {

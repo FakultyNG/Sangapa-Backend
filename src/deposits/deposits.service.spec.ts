@@ -202,6 +202,7 @@ describe('DepositsService', () => {
         provider: { amount: '5', currency: 'XAF' },
         reepay: { amount: '10', currency: 'XAF' },
       },
+      totalFee: { amount: '15', currency: 'XAF' },
       totalDebit: { amount: '115', currency: 'XAF' },
       status: 'pending',
     });
@@ -240,6 +241,7 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
       status: 'quoted',
     });
@@ -285,6 +287,7 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
       status: 'pending',
     });
