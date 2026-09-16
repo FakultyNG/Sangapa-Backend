@@ -523,6 +523,10 @@ XAF deposit create response:
       "currency": "XAF"
     }
   },
+  "totalFee": {
+    "amount": "150",
+    "currency": "XAF"
+  },
   "totalDebit": {
     "amount": "10150",
     "currency": "XAF"
@@ -534,8 +538,9 @@ UI meaning:
 
 - `creditedAmount.amount`: amount that will be added to the XAF wallet after Reepay confirms the deposit.
 - `amount`: original wallet-credit amount sent to Reepay.
-- `fees.reepay.amount`: SangaPay/Reepay service fee.
-- `fees.provider.amount`: provider fee, currently `0` unless Reepay returns otherwise.
+- `fees.reepay.amount`: SangaPay/Reepay service fee, kept for diagnostics and receipts.
+- `fees.provider.amount`: provider fee, currently `0` unless Reepay returns otherwise, kept for diagnostics and receipts.
+- `totalFee.amount`: frontend display fee. It is the sum of `fees.reepay.amount` and `fees.provider.amount` when both are returned in the same currency.
 - `totalDebit.amount`: amount the customer must pay through Mobile Money.
 - `id` / `reference`: Reepay deposit identifiers for status checks and receipts.
 - `expiresAt`: preferred countdown deadline when Reepay returns it.

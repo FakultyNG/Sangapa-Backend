@@ -22,5 +22,6 @@ export type XafDepositResponse = {
   expiresInSec: number | null;
   creditedAmount: MoneyAmount | null;
   fees: DepositFees;
+  totalFee: MoneyAmount | null;
   totalDebit: MoneyAmount | null;
 };
