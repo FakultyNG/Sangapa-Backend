@@ -82,6 +82,8 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      reepayFee: { amount: '150', currency: 'XAF' },
+      providerFee: { amount: '0', currency: 'XAF' },
       totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
     });
@@ -114,6 +116,8 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      reepayFee: { amount: '150', currency: 'XAF' },
+      providerFee: { amount: '0', currency: 'XAF' },
       totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
     });
@@ -182,6 +186,8 @@ describe('DepositsService', () => {
         provider: null,
         reepay: null,
       },
+      reepayFee: null,
+      providerFee: null,
       totalFee: null,
       totalDebit: null,
     });
@@ -202,7 +208,9 @@ describe('DepositsService', () => {
         provider: { amount: '5', currency: 'XAF' },
         reepay: { amount: '10', currency: 'XAF' },
       },
-      totalFee: { amount: '15', currency: 'XAF' },
+      reepayFee: { amount: '10', currency: 'XAF' },
+      providerFee: { amount: '5', currency: 'XAF' },
+      totalFee: { amount: '20', currency: 'XAF' },
       totalDebit: { amount: '115', currency: 'XAF' },
       status: 'pending',
     });
@@ -223,7 +231,9 @@ describe('DepositsService', () => {
     expect(response.creditedAmount).toEqual({ amount: '10000', currency: 'XAF' });
     expect(response.fees.reepay).toEqual({ amount: '10', currency: 'XAF' });
     expect(response.fees.provider).toEqual({ amount: '5', currency: 'XAF' });
-    expect(response.totalFee).toEqual({ amount: '15', currency: 'XAF' });
+    expect(response.reepayFee).toEqual({ amount: '10', currency: 'XAF' });
+    expect(response.providerFee).toEqual({ amount: '5', currency: 'XAF' });
+    expect(response.totalFee).toEqual({ amount: '20', currency: 'XAF' });
     expect(response.totalDebit).toEqual({ amount: '115', currency: 'XAF' });
   });
 
@@ -241,6 +251,8 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      reepayFee: { amount: '150', currency: 'XAF' },
+      providerFee: { amount: '0', currency: 'XAF' },
       totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
       status: 'quoted',
@@ -262,6 +274,8 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      reepayFee: { amount: '150', currency: 'XAF' },
+      providerFee: { amount: '0', currency: 'XAF' },
       totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
     });
@@ -287,6 +301,8 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      reepayFee: { amount: '150', currency: 'XAF' },
+      providerFee: { amount: '0', currency: 'XAF' },
       totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
       status: 'pending',
@@ -300,6 +316,8 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      reepayFee: { amount: '150', currency: 'XAF' },
+      providerFee: { amount: '0', currency: 'XAF' },
       totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
       status: 'pending',
@@ -320,6 +338,8 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      reepayFee: { amount: '150', currency: 'XAF' },
+      providerFee: { amount: '0', currency: 'XAF' },
       totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
       status: 'completed',
@@ -339,6 +359,8 @@ describe('DepositsService', () => {
         provider: { amount: '0', currency: 'XAF' },
         reepay: { amount: '150', currency: 'XAF' },
       },
+      reepayFee: { amount: '150', currency: 'XAF' },
+      providerFee: { amount: '0', currency: 'XAF' },
       totalFee: { amount: '150', currency: 'XAF' },
       totalDebit: { amount: '10150', currency: 'XAF' },
       status: 'completed',

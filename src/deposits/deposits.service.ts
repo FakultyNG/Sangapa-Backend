@@ -111,6 +111,8 @@ export class DepositsService {
         provider: providerFee,
         reepay: reepayFee,
       },
+      reepayFee: this.getMoneyAmount(deposit.reepayFee) ?? reepayFee,
+      providerFee: this.getMoneyAmount(deposit.providerFee) ?? providerFee,
       totalFee: this.getMoneyAmount(deposit.totalFee),
       totalDebit: this.getMoneyAmount(deposit.totalDebit),
     };

@@ -523,6 +523,14 @@ XAF deposit create response:
       "currency": "XAF"
     }
   },
+  "reepayFee": {
+    "amount": "150",
+    "currency": "XAF"
+  },
+  "providerFee": {
+    "amount": "0",
+    "currency": "XAF"
+  },
   "totalFee": {
     "amount": "150",
     "currency": "XAF"
@@ -538,9 +546,9 @@ UI meaning:
 
 - `creditedAmount.amount`: amount that will be added to the XAF wallet after Reepay confirms the deposit.
 - `amount`: original wallet-credit amount sent to Reepay.
-- `fees.reepay.amount`: SangaPay/Reepay service fee, kept for diagnostics and receipts.
-- `fees.provider.amount`: provider fee, currently `0` unless Reepay returns otherwise, kept for diagnostics and receipts.
-- `totalFee.amount`: frontend display fee. It is the sum of `fees.reepay.amount` and `fees.provider.amount` when both are returned in the same currency.
+- `reepayFee.amount` or `fees.reepay.amount`: SangaPay/Reepay service fee returned by Reepay.
+- `providerFee.amount` or `fees.provider.amount`: provider fee returned by Reepay.
+- `totalFee.amount`: total fee returned by Reepay. SangaPay Backend does not calculate this locally.
 - `totalDebit.amount`: amount the customer must pay through Mobile Money.
 - `id` / `reference`: Reepay deposit identifiers for status checks and receipts.
 - `expiresAt`: preferred countdown deadline when Reepay returns it.
@@ -550,8 +558,10 @@ UI meaning:
 Manual deposit status refresh:
 
 - Frontend should show a reload/check-payment button while deposit status is `pending` or `processing`.
-- On click, call `POST /deposits/:id/verify`.
-- SangaPay Backend calls Reepay `POST /v1/deposits/:depositId/verify` and returns the refreshed frontend-safe deposit response.
+- For normal polling after checkout/payment screen, call `GET /deposits/:id`.
+- The reload/check-payment button may call `GET /deposits/:id` or `POST /deposits/:id/verify`.
+- Prefer `GET /deposits/:id` for normal polling and `POST /deposits/:id/verify` for explicit manual checks.
+- Reepay reconciles pending deposits during `GET /v1/deposits/:id`; SangaPay Backend returns the refreshed frontend-safe deposit response.
 - If verify returns `completed`, refresh wallet balance/summary from SangaPay Backend.
 - If verify returns `failed`, `cancelled`, or `refunded`, show a terminal failure state.
 - Webhooks still exist at `POST /webhooks/reepay`, but frontend must support manual verify because provider webhooks can be delayed or missed.
