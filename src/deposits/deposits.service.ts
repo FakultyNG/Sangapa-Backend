@@ -49,7 +49,7 @@ export class DepositsService {
         fullName: dto.fullName ?? user.fullName ?? undefined,
         email: dto.email ?? user.email,
         redirectUrl: dto.redirectUrl,
-        expiresInSec: dto.expiresInSec ?? 900,
+        ...(dto.expiresInSec ? { expiresInSec: dto.expiresInSec } : {}),
       },
     });
 

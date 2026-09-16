@@ -38,7 +38,7 @@ export class CreateXafDepositDto {
   @IsInt()
   @Min(60)
   @Max(3600)
-  expiresInSec?: number = 900;
+  expiresInSec?: number;
 
   @IsString()
   @Length(4, 4)
