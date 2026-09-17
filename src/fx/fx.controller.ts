@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -79,6 +79,15 @@ export class FxController {
     @Headers('idempotency-key') idempotencyKey?: string,
   ): Promise<ReepayWalletFundingConfirmation> {
     return this.fx.confirmWalletFunding(user.id, 'usdc', dto, request.id, idempotencyKey);
+  }
+
+  @Get('wallet/conversions/:id')
+  getWalletConversion(
+    @CurrentUser() user: AuthenticatedUser,
+    @Req() request: AuthenticatedRequest,
+    @Param('id') conversionId: string,
+  ): Promise<ReepayWalletFundingConfirmation> {
+    return this.fx.getWalletConversion(user.id, conversionId, request.id);
   }
 
   @Post('fx/quote/xaf-eur')

@@ -12,6 +12,7 @@ describe('FxService', () => {
     assertSensitivePin: jest.Mock<Promise<void>, [string, string]>;
   };
   let reepay: {
+    get: jest.Mock<Promise<Record<string, unknown>>, [string, Record<string, unknown>]>;
     post: jest.Mock<Promise<Record<string, unknown>>, [string, Record<string, unknown>]>;
   };
   let audit: {
@@ -23,6 +24,7 @@ describe('FxService', () => {
       assertSensitivePin: jest.fn<Promise<void>, [string, string]>(),
     };
     reepay = {
+      get: jest.fn<Promise<Record<string, unknown>>, [string, Record<string, unknown>]>(),
       post: jest.fn<Promise<Record<string, unknown>>, [string, Record<string, unknown>]>(),
     };
     audit = {
@@ -118,6 +120,19 @@ describe('FxService', () => {
       body: {
         quoteId: 'quote-id',
       },
+    });
+  });
+
+  it('loads a customer-scoped wallet conversion status from Reepay', async () => {
+    reepay.get.mockResolvedValueOnce({ id: 'conversion-id', status: 'processing' });
+
+    await expect(
+      service.getWalletConversion('user-id', 'conversion-id', 'request-id'),
+    ).resolves.toEqual({ id: 'conversion-id', status: 'processing' });
+
+    expect(reepay.get).toHaveBeenCalledWith('/v1/wallet/conversions/conversion-id', {
+      requestId: 'request-id',
+      query: { customerId: 'user-id' },
     });
   });
 

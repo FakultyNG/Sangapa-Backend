@@ -80,6 +80,20 @@ export class FxService {
     });
   }
 
+  getWalletConversion(
+    userId: string,
+    conversionId: string,
+    requestId?: string,
+  ): Promise<ReepayWalletFundingConfirmation> {
+    return this.reepay.get<ReepayWalletFundingConfirmation>(
+      `/v1/wallet/conversions/${encodeURIComponent(conversionId)}`,
+      {
+        requestId,
+        query: { customerId: userId },
+      },
+    );
+  }
+
   createXafToEurQuote(
     userId: string,
     dto: CreateWalletFundingQuoteDto,

@@ -578,6 +578,7 @@ Protected. Use `Idempotency-Key` for quote and confirm operations when available
 - `POST /wallet/eur/confirm`
 - `POST /wallet/usdc/quote`
 - `POST /wallet/usdc/confirm`
+- `GET /wallet/conversions/:id`
 - `POST /fx/quote/xaf-eur`
 - `POST /fx/quote/xaf-usdc`
 
@@ -585,6 +586,10 @@ Quote requests do not require a PIN. Money-moving confirmation requests must ask
 the request.
 
 Read-only FX rate endpoints do not require PIN. They still require bearer auth and derive `customerId` from the authenticated user.
+
+After wallet conversion confirmation, treat the returned backend status as authoritative. When it is `processing` or
+`pending`, poll `GET /wallet/conversions/:id` until it becomes `completed` or `failed`. Never display success before a
+terminal backend status is returned.
 
 Use `GET /fx/rates` or `GET /fx/rates/eur-xaf?amount=1` for the live home-screen EUR rate display. The default display is `1 EUR = <rate> XAF`.
 
