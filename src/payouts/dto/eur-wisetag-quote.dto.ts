@@ -1,4 +1,4 @@
-import { IsString, Length, Matches } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
 
 export class EurWiseTagQuoteDto {
   @IsString()
@@ -7,9 +7,4 @@ export class EurWiseTagQuoteDto {
 
   @IsString()
   wiseTag!: string;
-
-  @IsString()
-  @Length(4, 4)
-  @Matches(/^\d{4}$/)
-  pin!: string;
 }

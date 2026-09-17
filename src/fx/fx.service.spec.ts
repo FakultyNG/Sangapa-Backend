@@ -45,20 +45,20 @@ describe('FxService', () => {
     await moduleRef.close();
   });
 
-  it('creates EUR funding quote with authenticated user customerId and PIN check', async () => {
+  it('creates EUR funding quote without requiring a PIN', async () => {
     reepay.post.mockResolvedValueOnce({ quoteId: 'quote-id' });
 
     await expect(
       service.createWalletFundingQuote(
         'user-id',
         'eur',
-        { amount: '250.00', pin: '1234' },
+        { amount: '250.00' },
         'request-id',
         'idem-key',
       ),
     ).resolves.toEqual({ quoteId: 'quote-id' });
 
-    expect(auth.assertSensitivePin).toHaveBeenCalledWith('user-id', '1234');
+    expect(auth.assertSensitivePin).not.toHaveBeenCalled();
     expect(audit.record).toHaveBeenCalledWith({
       action: 'wallet.eur.quote',
       userId: 'user-id',
@@ -83,7 +83,7 @@ describe('FxService', () => {
 
     await service.createXafToUsdcQuote(
       'user-id',
-      { amount: '100.00', pin: '1234' },
+      { amount: '100.00' },
       'request-id',
       'idem-key',
     );

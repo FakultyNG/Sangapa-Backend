@@ -30,7 +30,6 @@ export class FxService {
     requestId?: string,
     idempotencyKey?: string,
   ): Promise<ReepayFxQuote> {
-    await this.auth.assertSensitivePin(userId, dto.pin);
     const resolvedIdempotencyKey = resolveIdempotencyKey(idempotencyKey);
 
     this.audit.record({

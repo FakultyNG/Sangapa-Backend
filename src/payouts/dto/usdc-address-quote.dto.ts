@@ -1,4 +1,4 @@
-import { IsString, Length, Matches } from 'class-validator';
+import { IsString, Matches } from 'class-validator';
 
 export class UsdcAddressQuoteDto {
   @IsString()
@@ -10,9 +10,4 @@ export class UsdcAddressQuoteDto {
 
   @IsString()
   address!: string;
-
-  @IsString()
-  @Length(4, 4)
-  @Matches(/^\d{4}$/)
-  pin!: string;
 }

@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsOptional, IsString, Matches } from 'class-validator';
 
 export class EurIbanQuoteDto {
   @IsString()
@@ -18,9 +18,4 @@ export class EurIbanQuoteDto {
   @IsOptional()
   @IsString()
   beneficiaryAddress?: string;
-
-  @IsString()
-  @Length(4, 4)
-  @Matches(/^\d{4}$/)
-  pin!: string;
 }

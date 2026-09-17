@@ -581,7 +581,8 @@ Protected. Use `Idempotency-Key` for quote and confirm operations when available
 - `POST /fx/quote/xaf-eur`
 - `POST /fx/quote/xaf-usdc`
 
-Sensitive or money-moving actions should ask for PIN in the UI before sending the request.
+Quote requests do not require a PIN. Money-moving confirmation requests must ask for PIN in the UI before sending
+the request.
 
 Read-only FX rate endpoints do not require PIN. They still require bearer auth and derive `customerId` from the authenticated user.
 
@@ -636,7 +637,7 @@ Do not mark payout successful from initial confirmation. Final status comes from
 Send USDC flow:
 
 - Do not use frontend mock data after the user confirms send USDC.
-- Step 1: collect amount, network, address, and PIN.
+- Step 1: collect amount, network, and address.
 - Step 2: create quote with `POST /payouts/usdc/address/quote`.
 - Step 3: show quote details returned by backend/Reepay.
 - Step 4: confirm with `POST /payouts/usdc/address/confirm` using the returned `quoteId` and PIN.
@@ -652,8 +653,7 @@ USDC quote body:
 {
   "amount": "100.00",
   "network": "POLYGON",
-  "address": "0x...",
-  "pin": "1234"
+  "address": "0x..."
 }
 ```
 

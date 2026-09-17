@@ -41,7 +41,6 @@ export class PayoutsService {
     requestId?: string,
     idempotencyKey?: string,
   ): Promise<ReepayPayoutQuote> {
-    await this.auth.assertSensitivePin(userId, dto.pin);
     const resolvedIdempotencyKey = resolveIdempotencyKey(idempotencyKey);
 
     this.audit.record({
@@ -101,7 +100,6 @@ export class PayoutsService {
     requestId?: string,
     idempotencyKey?: string,
   ): Promise<ReepayPayoutQuote> {
-    await this.auth.assertSensitivePin(userId, dto.pin);
     const resolvedIdempotencyKey = resolveIdempotencyKey(idempotencyKey);
 
     this.audit.record({
@@ -158,7 +156,6 @@ export class PayoutsService {
     requestId?: string,
     idempotencyKey?: string,
   ): Promise<ReepayPayoutQuote> {
-    await this.auth.assertSensitivePin(userId, dto.pin);
     const resolvedIdempotencyKey = resolveIdempotencyKey(idempotencyKey);
 
     this.audit.record({
